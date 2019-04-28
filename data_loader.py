@@ -19,7 +19,8 @@ spk2acc = {'262': 'Edinburgh', #F
            '251': 'India'} #M
 min_length = 256   # Since we slice 256 frames from each utterance when training.
 # Build a dict useful when we want to get one-hot representation of speakers.
-speakers = ['p262', 'p272', 'p229', 'p232', 'p292', 'p293', 'p360', 'p361', 'p248', 'p251']
+#speakers = ['p262', 'p272', 'p229', 'p232', 'p292', 'p293', 'p360', 'p361', 'p248', 'p251']
+speakers = ['VCC2SF1', 'VCC2SF2', 'VCC2SF3', 'VCC2SM1', 'VCC2SM2', 'VCC2SM3', 'VCC2TF1', 'VCC2TF2', 'VCC2TM1', 'VCC2TM2']
 spk2idx = dict(zip(speakers, range(len(speakers))))
 
 def to_categorical(y, num_classes=None):
@@ -52,7 +53,10 @@ class MyDataset(data.Dataset):
     """Dataset for MCEP features and speaker labels."""
     def __init__(self, data_dir):
         mc_files = glob.glob(join(data_dir, '*.npy'))
-        mc_files = [i for i in mc_files if basename(i)[:4] in speakers] 
+        #print(len(mc_files))
+        #mc_files = [i for i in mc_files if basename(i)[:4] in speakers]
+        mc_files = [i for i in mc_files if basename(i)[:7] in speakers]
+        #print(len(mc_files))
         self.mc_files = self.rm_too_short_utt(mc_files)
         self.num_files = len(self.mc_files)
         print("\t Number of training samples: ", self.num_files)
@@ -80,16 +84,18 @@ class MyDataset(data.Dataset):
 
     def __getitem__(self, index):
         filename = self.mc_files[index]
+        #print("filename:", filename)
         spk = basename(filename).split('_')[0]
         spk_idx = spk2idx[spk]
         mc = np.load(filename)
+        #print("length of mc: ", len(mc))
         mc = self.sample_seg(mc)
+        #print("after processing mc length: ", len(mc))
         mc = np.transpose(mc, (1, 0))  # (T, D) -> (D, T), since pytorch need feature having shape
         # to one-hot
         spk_cat = np.squeeze(to_categorical([spk_idx], num_classes=len(speakers)))
 
         return torch.FloatTensor(mc), torch.LongTensor([spk_idx]).squeeze_(), torch.FloatTensor(spk_cat)
-        
 
 class TestDataset(object):
     """Dataset for testing."""
@@ -100,7 +106,6 @@ class TestDataset(object):
 
         self.src_spk_stats = np.load(join(data_dir.replace('test', 'train'), '{}_stats.npz'.format(src_spk)))
         self.trg_spk_stats = np.load(join(data_dir.replace('test', 'train'), '{}_stats.npz'.format(trg_spk)))
-        
         self.logf0s_mean_src = self.src_spk_stats['log_f0s_mean']
         self.logf0s_std_src = self.src_spk_stats['log_f0s_std']
         self.logf0s_mean_trg = self.trg_spk_stats['log_f0s_mean']
@@ -121,7 +126,7 @@ class TestDataset(object):
             filename = basename(mcfile).split('-')[-1]
             wavfile_path = join(self.src_wav_dir, filename.replace('npy', 'wav'))
             batch_data.append(wavfile_path)
-        return batch_data       
+        return batch_data
 
 def get_loader(data_dir, batch_size=32, mode='train', num_workers=1):
     dataset = MyDataset(data_dir)
@@ -134,7 +139,7 @@ def get_loader(data_dir, batch_size=32, mode='train', num_workers=1):
 
 
 if __name__ == '__main__':
-    loader = get_loader('./data/mc/train')
+    loader = get_loader('./data/mc2/train')
     data_iter = iter(loader)
     for i in range(10):
         mc, spk_idx, acc_idx, spk_acc_cat = next(data_iter)

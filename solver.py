@@ -49,6 +49,7 @@ class Solver(object):
         # Miscellaneous.
         self.use_tensorboard = config.use_tensorboard
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(self.device)
 
         # Directories.
         self.log_dir = config.log_dir
@@ -68,8 +69,8 @@ class Solver(object):
 
     def build_model(self):
         """Create a generator and a discriminator."""
-        self.G = Generator(num_speakers=self.num_speakers)
-        self.D = Discriminator(num_speakers=self.num_speakers)
+        self.G = torch.nn.DataParallel(Generator(num_speakers=self.num_speakers))
+        self.D = torch.nn.DataParallel(Discriminator(num_speakers=self.num_speakers))
 
         self.g_optimizer = torch.optim.Adam(self.G.parameters(), self.g_lr, [self.beta1, self.beta2])
         self.d_optimizer = torch.optim.Adam(self.D.parameters(), self.d_lr, [self.beta1, self.beta2])
@@ -161,7 +162,7 @@ class Solver(object):
 
         # Read a batch of testdata
         test_wavfiles = self.test_loader.get_batch_test_data(batch_size=4)
-        test_wavs = [self.load_wav(wavfile) for wavfile in test_wavfiles]
+        test_wavs = [self.load_wav(wavfile, sr=22050) for wavfile in test_wavfiles]
 
         # Determine whether do copysynthesize when first do training-time conversion test.
         cpsyn_flag = [True, False][0]
@@ -284,7 +285,8 @@ class Solver(object):
                         self.logger.scalar_summary(tag, value, i+1)
 
             if (i+1) % self.sample_step == 0:
-                sampling_rate=16000
+                #sampling_rate=16000
+                sampling_rate=22050
                 num_mcep=36
                 frame_period=5
                 with torch.no_grad():
@@ -307,13 +309,16 @@ class Solver(object):
                         # decoded_sp_converted = world_decode_spectral_envelop(coded_sp = coded_sp_converted, fs = sampling_rate)
                         wav_transformed = world_speech_synthesis(f0=f0_converted, coded_sp=coded_sp_converted, 
                                                                 ap=ap, fs=sampling_rate, frame_period=frame_period)
-                        
-                        librosa.output.write_wav(
-                            join(self.sample_dir, str(i+1)+'-'+wav_name.split('.')[0]+'-vcto-{}'.format(self.test_loader.trg_spk)+'.wav'), wav_transformed, sampling_rate)
-                        if cpsyn_flag:
-                            wav_cpsyn = world_speech_synthesis(f0=f0, coded_sp=coded_sp, 
+                        try:
+                            librosa.output.write_wav(
+                                join(self.sample_dir, str(i+1)+'-'+wav_name.split('.')[0]+'-vcto-{}'.format(self.test_loader.trg_spk)+'.wav'), wav_transformed, sampling_rate)
+                            if cpsyn_flag:
+                                wav_cpsyn = world_speech_synthesis(f0=f0, coded_sp=coded_sp, 
                                                         ap=ap, fs=sampling_rate, frame_period=frame_period)
-                            librosa.output.write_wav(join(self.sample_dir, 'cpsyn-'+wav_name), wav_cpsyn, sampling_rate)
+                                librosa.output.write_wav(join(self.sample_dir, 'cpsyn-'+wav_name), wav_cpsyn, sampling_rate)
+                        except:
+                            print("parameter error occurred")
+                            pass
                     cpsyn_flag = False
 
             # Save model checkpoints.

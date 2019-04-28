@@ -22,7 +22,8 @@ def resample(spk, origin_wavpath, target_wavpath):
         os.makedirs(folder_to, exist_ok=True)
         wav_to = join(folder_to, wav)
         wav_from = join(origin_wavpath, spk, wav)
-        subprocess.call(['sox', wav_from, "-r", "16000", wav_to])
+        #subprocess.call(['sox', wav_from, "-r", "16000", wav_to])
+        subprocess.call(['sox', wav_from, "-r", "22050", wav_to])
     return 0
 
 def resample_to_16k(origin_wavpath, target_wavpath, num_workers=1):
@@ -96,6 +97,7 @@ if __name__ == '__main__':
     argv = parser.parse_args()
 
     sample_rate = argv.sample_rate
+    print(sample_rate)
     origin_wavpath = argv.origin_wavpath
     target_wavpath = argv.target_wavpath
     mc_dir_train = argv.mc_dir_train
@@ -106,8 +108,10 @@ if __name__ == '__main__':
     resample_to_16k(origin_wavpath, target_wavpath, num_workers=num_workers)
 
     # WE only use 10 speakers listed below for this experiment.
-    speaker_used = ['262', '272', '229', '232', '292', '293', '360', '361', '248', '251']
-    speaker_used = ['p'+i for i in speaker_used]
+    #speaker_used = ['262', '272', '229', '232', '292', '293', '360', '361', '248', '251']
+    #speaker_used = ['p'+i for i in speaker_used]
+    speaker_used = ['SF1', 'SF2', 'SF3', 'SF4', 'SM1', 'SM2', 'SM3', 'SM4', 'TF1', 'TF2', 'TM1', 'TF2']
+    speaker_used = ['VCC2'+i for i in speaker_used]
 
     ## Next we are to extract the acoustic features (MCEPs, lf0) and compute the corresponding stats (means, stds). 
     # Make dirs to contain the MCEPs
@@ -130,4 +134,3 @@ if __name__ == '__main__':
     result_list = [future.result() for future in tqdm(futures)]
     print(result_list)
     sys.exit(0)
-

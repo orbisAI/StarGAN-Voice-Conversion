@@ -103,12 +103,13 @@ def wav_padding(wav, sr, frame_period, multiple = 4):
 
     assert wav.ndim == 1 
     num_frames = len(wav)
+    print("Original size: ", num_frames)
     num_frames_padded = int((np.ceil((np.floor(num_frames / (sr * frame_period / 1000)) + 1) / multiple + 1) * multiple - 1) * (sr * frame_period / 1000))
     num_frames_diff = num_frames_padded - num_frames
     num_pad_left = num_frames_diff // 2
     num_pad_right = num_frames_diff - num_pad_left
     wav_padded = np.pad(wav, (num_pad_left, num_pad_right), 'constant', constant_values = 0)
-
+    print("padded size: ", len(wav_padded))
     return wav_padded
 
 def logf0_statistics(f0s):

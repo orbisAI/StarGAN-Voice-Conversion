@@ -12,6 +12,7 @@ from data_loader import to_categorical
 import librosa
 from utils import *
 import glob
+import torch.nn as nn
 
 # Below is the accent info for the used 10 speakers.
 spk2acc = {'262': 'Edinburgh', #F
@@ -25,7 +26,8 @@ spk2acc = {'262': 'Edinburgh', #F
            '248': 'India', #F
            '251': 'India'} #M
 
-speakers = ['p262', 'p272', 'p229', 'p232', 'p292', 'p293', 'p360', 'p361', 'p248', 'p251']
+#speakers = ['p262', 'p272', 'p229', 'p232', 'p292', 'p293', 'p360', 'p361', 'p248', 'p251']
+speakers = ['VCC2SF1', 'VCC2SF2', 'VCC2SF3', 'VCC2SM1', 'VCC2SM2', 'VCC2SM3', 'VCC2TF1', 'VCC2TF2', 'VCC2TM1', 'VCC2TM2']
 spk2idx = dict(zip(speakers, range(len(speakers))))
 
 class TestDataset(object):
@@ -74,10 +76,11 @@ def load_wav(wavfile, sr=16000):
 
 def test(config):
     os.makedirs(join(config.convert_dir, str(config.resume_iters)), exist_ok=True)
-    sampling_rate, num_mcep, frame_period=16000, 36, 5
+    #sampling_rate, num_mcep, frame_period=16000, 36, 5
+    sampling_rate, num_mcep, frame_period=22050, 36, 5
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    G = Generator().to(device)
+    print(device)
+    G = nn.DataParallel(Generator().to(device))
     test_loader = TestDataset(config)
     # Restore model
     print(f'Loading the trained models from step {config.resume_iters}...')
